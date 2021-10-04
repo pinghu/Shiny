@@ -1,0 +1,106 @@
+---
+title: "Peer Review Three"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(shiny)
+library(shinyWidgets)
+library(rsconnect)
+
+dat<-read_csv(url("https://www.dropbox.com/s/4ebgnkdhhxo5rac/cel_volden_wiseman%20_coursera.csv?raw=1"))
+
+dat$Party<-recode(dat$dem,`1`="Democrat",`0`="Republican")
+
+#rsconnect::setAccountInfo(name='pinglearning',
+#			  token='#####',
+#			  secret='#####')
+
+#######HINT: for Chart D, you'll need to set the height of the renderPlot, using the height argument. Try a value of 750.
+
+#####some data management functions are already included. You need to add the visualization functions.
+```
+
+Page 1
+======
+### Chart A
+```{r}
+data1<-dat %>% 
+  drop_na() %>% 
+  filter(year>1979) %>% 
+  group_by(year,Party) %>% 
+  summarise(passed=sum(all_pass))
+
+ggplot(data1, aes(x=year, y=passed, fill=Party)) + geom_area(alpha=0.6 , size=.5, colour="white")  + xlab("Year") + ylab("All Bills Passed") + ggtitle("Number of Bills Passed Since 1980")
+```
+
+
+Page 2
+======
+### Chart B
+
+```{r}
+data2<-dat%>%
+  drop_na()%>%
+  filter(congress==110)
+p1<-ggplot(data2, aes(x=votepct, y=all_pass, color=Party)) + geom_point() + geom_smooth(method=lm)+ ggtitle("Passage and Vote Pct., 110 Congress")+ xlab("Vote Pct.")+ ylab("All Pass")
+ggplotly(p1)
+```
+
+### Chart C
+
+```{r}
+data2<-dat%>%
+  drop_na()%>%
+  filter(congress==110)
+p2<-ggplot(data2, aes(x=dwnom1, y=all_pass, color=Party)) + geom_point() + geom_smooth(method=lm)+ ggtitle("Passage and Ideology, 110 Congress") +xlab("DW Nominate") + ylab("All Pass")
+ggplotly(p2)
+```
+
+Page 3
+======
+### Chart D
+```{r golbal, include=FALSE}
+data3<-dat %>% 
+  group_by(st_name) %>% 
+  filter(congress==110) %>%
+  summarise(passed=sum(all_pass))
+```
+Column {.sidebar}
+--------------------------------------------------
+
+```{r}
+#    selectInput("state", label = "state",choices = data3$st_name, selected = data3$st_name, multiple=TRUE)
+
+checkboxGroupInput("state", label = "state",choices = data3$st_name, selected = data3$st_name, inline=TRUE)
+#checkboxGroupButtons(
+#   inputId = "state",
+#   label = "State", 
+#   status = "primary",
+#   choices = data3$st_name,
+#   selected = data3$st_name,
+#  checkIcon = list(
+#     yes = icon("ok", 
+#     lib = "glyphicon"),
+#     no = icon("remove",
+#     lib = "glyphicon")) 
+#) 
+
+```
+
+Column
+--------------------------------------------------
+```{r}
+renderPlot(height=750,{
+  data4<-reactive({data3 %>% filter(st_name %in% input$state)})
+  ggplot(data4(), aes(x=st_name, y=passed)) + geom_col() +coord_flip() +ggtitle("Total Bill Passed by State Delegation, 110 Congress") +xlab("State Name") + ylab("Total Bill Passed Per State")
+})
+
+```
